@@ -990,30 +990,33 @@ function imprimirNota() {
 <head>
   <meta charset="UTF-8">
   <title>Notinha - PontoAçaí</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 13px;
-      color: #000;
-      background: #fff;
-      width: 80mm;
-      margin: 0 auto;
-      padding: 6mm 4mm;
-      line-height: 1.6;
+<style>
+    /* Estilos para a tela (opcional) */
+    body { font-family: Arial, sans-serif; }
+
+    /* Estilos EXCLUSIVOS para a impressora */
+    @media print {
+        @page {
+            size: 80mm auto; /* Força o tamanho da POS-80 */
+            margin: 0;       /* Remove margens do navegador */
+        }
+        body {
+            width: 80mm;
+            margin: 0;
+            padding: 0;
+        }
+        .ticket {
+            width: 72mm; /* Margem de segurança para não cortar texto */
+            padding: 5mm;
+            font-family: 'Courier New', Courier, monospace; /* Fonte padrão de térmica */
+            font-size: 12pt;
+            color: #000;
+        }
+        h1 { font-size: 18pt; text-align: center; margin: 0; }
+        p { margin: 5px 0; }
+        .header { text-align: center; }
     }
-    .nota-center  { text-align: center; }
-    .nota-bold    { font-weight: bold; }
-    .nota-grande  { font-size: 17px; font-weight: bold; text-align: center; }
-    .nota-numero  { font-size: 30px; font-weight: bold; text-align: center; letter-spacing: 3px; }
-    .nota-hr      { border: none; border-top: 1px dashed #000; margin: 5px 0; }
-    .nota-linha   { display: flex; justify-content: space-between; }
-    .nota-gratis  { font-style: italic; color: #333; }
-    .nota-total   { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; border-top: 2px solid #000; padding-top: 4px; margin-top: 4px; }
-    .nota-obs     { font-style: italic; font-size: 11px; }
-    .nota-rodape  { text-align: center; font-size: 11px; margin-top: 10px; }
-    @media print { body { margin: 0; padding: 4mm; } }
-  </style>
+</style>
 </head>
 <body>
   ${conteudo}
