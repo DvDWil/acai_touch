@@ -5,7 +5,7 @@
 // ============================================================
 
 define('DB_HOST',    'localhost');
-define('DB_NAME',    'acai_selva');
+define('DB_NAME',    'pontoAcai');
 define('DB_USER',    'root');   // padrão XAMPP
 define('DB_PASS',    '');       // padrão XAMPP (sem senha)
 define('DB_CHARSET', 'utf8mb4');
