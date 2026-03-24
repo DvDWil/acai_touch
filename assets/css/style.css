@@ -1,0 +1,50 @@
+/* assets/css/style.css */
+:root {
+  --roxo: #3D1A6B; 
+  --roxo-medio: #6B2FA0; 
+  --roxo-claro: #9B59D0; 
+  --acai: #2C0E4E;
+  --rosa: #E91E8C; 
+  --rosa-claro: #FF6EB4; 
+  --amarelo: #FFD700; 
+  --creme: #FFF8F0;
+  --verde: #2ECC71; 
+  --vermelho: #E74C3C; 
+  --laranja: #FF7043; 
+  --bg: #1A0A30;
+}
+
+body { 
+  font-family: 'Nunito', sans-serif; 
+  background: var(--bg); 
+  color: white;
+  min-height: 100vh; 
+}
+
+/* Estilização dos Cards (Exemplo baseado no seu HTML) */
+.size-card, .type-card, .comp-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--roxo-medio);
+  border-radius: 15px;
+  padding: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.size-card.selected, .type-card.selected, .comp-card.selected {
+  border-color: var(--rosa);
+  background: var(--roxo-medio);
+  transform: scale(1.05);
+}
+
+.popular-badge {
+  background: var(--amarelo);
+  color: var(--acai);
+  font-weight: bold;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
