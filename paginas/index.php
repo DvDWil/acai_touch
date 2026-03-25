@@ -253,6 +253,37 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
   .calda-price-badge.gratis  { background: var(--verde); }
   .calda-price-badge.pago    { background: var(--rosa); }
 
+
+/* ── TELA MAIS UM ─────────────────────────────────────── */
+  .mais-grid {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    width: 100%;
+    max-width: 600px;
+  }
+  .mais-card {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(155,89,208,0.3);
+    border-radius: 24px;
+    padding: 30px;
+    flex: 1;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .mais-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255,255,255,0.1);
+  }
+  .mais-card.sim { border-color: var(--rosa); }
+  .mais-card.nao { border-color: var(--verde); }
+  
+  .mais-emoji { font-size: 3.5rem; margin-bottom: 10px; }
+  .mais-label { font-family: 'Baloo 2', cursive; font-size: 1.8rem; font-weight: 900; }
+  .mais-sub { font-size: 0.9rem; color: rgba(255,255,255,0.6); }
+
+  
   /* ── TELA 5: RESUMO ───────────────────────────────────── */
   .resumo-container { width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 16px; }
   .resumo-box {
@@ -337,6 +368,7 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
   #nota-impressao { display: none; }
 
   @media print {
+    @page { size: 80mm auto; margin: 0; }
     body > * { display: none !important; }
     #nota-impressao {
       display: block !important;
@@ -493,7 +525,7 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
   <!-- HEADER -->
   <div class="header">
     <div class="logo">
-      <span class="logo-emoji">🍇</span>Ponto<span>Açaí</span>
+      <span class="logo-emoji">🫐</span>Ponto<span>Açaí</span>
     </div>
     <div class="step-indicator">
       <div class="step-dot active" id="dot1"></div>
@@ -630,11 +662,30 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
     </div>
     <div class="btn-group">
       <button class="btn btn-secondary" onclick="goTo('complementos')">← Voltar</button>
-      <button class="btn btn-primary" id="btn-next4" onclick="goTo('resumo')" disabled>Ver resumo →</button>
+      <button class="btn btn-primary" id="btn-next4" onclick="goTo('mais')" disabled>Próximo →</button>
     </div>
   </div>
 
-  <!-- ═══ TELA 5: RESUMO ═══ -->
+  <!-- TELA 5: MAIS UM? -->
+  <div class="screen" id="screen-mais">
+    <div class="progress-bar"><div class="progress-fill" style="width:83%"></div></div>
+    <div class="screen-title">🙌 Deseja mais um açaí?</div>
+    <div class="screen-sub">Seu primeiro copo já está salvo no pedido</div>
+    <div class="mais-grid">
+      <div class="mais-card sim" onclick="maisUm(true)">
+        <div class="mais-emoji">🥤</div>
+        <div class="mais-label">SIM!</div>
+        <div class="mais-sub">Adicionar outro copo</div>
+      </div>
+      <div class="mais-card nao" onclick="maisUm(false)">
+        <div class="mais-emoji">✅</div>
+        <div class="mais-label">NÃO</div>
+        <div class="mais-sub">Ir para o pagamento</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TELA 6: RESUMO ═══ -->
   <div class="screen" id="screen-resumo">
     <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
     <div class="screen-title">📋 Seu Pedido</div>
@@ -725,12 +776,13 @@ const CFG_CALDAS     = <?= json_encode($caldasDB,     JSON_UNESCAPED_UNICODE) ?>
 
 // ── Estado ──────────────────────────────────────────────────
 let state = {
-  tamanhoId: null, tamanhoNome: '', tamanhoML: 0, tamanhoAcrescimo: 0, gratis: 0,
-  saborId: null, saborNome: '', saborEmoji: '', saborPreco: 0,
-  complementos: [],   // [{id, nome, emoji, preco, ehGratis}]
-  caldaId: null, caldaNome: '', caldaPreco: 0,
+  tamanhoId: null, tamanhoNome: 'N/A', tamanhoML: 0, tamanhoAcrescimo: 0, gratis: 0,
+  saborId: null, saborNome: 'N/A', saborEmoji: '', saborPreco: 0,
+  complementos: [], 
+  caldaId: null, caldaNome: 'N/A', caldaPreco: 0,
+  itensConfirmados: [], 
+  totalPedidoAcumulado: 0 
 };
-
 // ── Navegação ────────────────────────────────────────────────
 const STEPS = ['tamanho','sabor','complementos','calda','resumo'];
 function goTo(screen) {
@@ -842,38 +894,96 @@ function selectCalda(el, id) {
 // ── Resumo ───────────────────────────────────────────────────
 function fmt(v) { return 'R$ ' + parseFloat(v).toFixed(2).replace('.',','); }
 
+
+function maisUm(querMais) {
+  if (querMais) {
+    // Salva o copo atual na lista de confirmados e acumula o total
+    const valorCopoAtual = calcularTotal();
+    state.itensConfirmados.push({
+      tamanhoNome: state.tamanhoNome || 'Açaí',
+      tamanhoML:   state.tamanhoML   || 0,
+      saborNome:   state.saborNome   || 'Tradicional',
+      caldaNome:   state.caldaNome   || '',
+      caldaPreco:  state.caldaPreco  || 0,
+      complementos: state.complementos.slice(), // cópia dos complementos
+      saborPreco:   state.saborPreco  || 0,
+      acrescimo:    state.tamanhoAcrescimo || 0,
+      valor:        valorCopoAtual
+    });
+    state.totalPedidoAcumulado += valorCopoAtual;
+
+    // Reseta apenas o "copo atual"
+    state.tamanhoId = null; state.tamanhoNome = ''; state.tamanhoML = 0;
+    state.tamanhoAcrescimo = 0; state.gratis = 0;
+    state.saborId = null; state.saborNome = ''; state.saborEmoji = ''; state.saborPreco = 0;
+    state.caldaId = null; state.caldaNome = ''; state.caldaPreco = 0;
+    state.complementos = [];
+
+    // Limpa o visual
+    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected', 'gratis'));
+    document.getElementById('btn-next1').disabled = true;
+    document.getElementById('btn-next2').disabled = true;
+    document.getElementById('btn-next4').disabled = true;
+
+    goTo('tamanho');
+  } else {
+    // Vai direto pro resumo — o copo atual ainda está no state, NÃO salva em itensConfirmados
+    montarResumo();
+    goTo('resumo');
+  }
+}
+
 function calcularTotal() {
   const extraComps = state.complementos.filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
-  return state.saborPreco + state.tamanhoAcrescimo + extraComps + state.caldaPreco;
+  return (state.saborPreco || 0) + (state.tamanhoAcrescimo || 0) + extraComps + (state.caldaPreco || 0);
 }
 
 function montarResumo() {
-  document.getElementById('r-tamanho').textContent = `${state.tamanhoNome} (${state.tamanhoML}ml)`;
-  document.getElementById('r-sabor').textContent   = `${state.saborEmoji} ${state.saborNome}`;
-  document.getElementById('r-calda').textContent   = state.caldaNome;
+  const lista        = document.getElementById('r-comps-lista');
+  const totalDisplay = document.getElementById('r-total');
+  let htmlItens      = '';
 
-  const lista = document.getElementById('r-comps-lista');
-  if(state.complementos.length === 0) {
-    lista.innerHTML = `<div class="resumo-linha"><span class="resumo-label" style="color:rgba(255,255,255,0.3)">Nenhum</span></div>`;
-  } else {
-    lista.innerHTML = state.complementos.map(c => `
-      <div class="resumo-linha">
-        <span class="resumo-label">${c.emoji} ${c.nome}</span>
-        <span class="resumo-valor ${c.ehGratis?'gratis':''}">${c.ehGratis ? '🎁 GRÁTIS' : fmt(c.preco)}</span>
-      </div>`).join('');
-  }
+  // Copos já confirmados (clicaram "Mais um" antes)
+  state.itensConfirmados.forEach((item, index) => {
+    htmlItens += `
+      <div class="resumo-linha" style="border-left:3px solid var(--rosa);margin-bottom:4px">
+        <span class="resumo-label">Copo #${index + 1}: ${item.tamanhoNome} ${item.tamanhoML}ml — ${item.saborNome}</span>
+        <span class="resumo-valor">${fmt(item.valor)}</span>
+      </div>`;
+  });
 
+  // Copo atual (o que está no state agora, ainda não salvo em itensConfirmados)
+  const numAtual   = state.itensConfirmados.length + 1;
+  const valorAtual = calcularTotal();
+  htmlItens += `
+    <div class="resumo-linha" style="border-left:3px solid var(--verde);font-weight:bold">
+      <span class="resumo-label">Copo #${numAtual}: ${state.tamanhoNome || ''} ${state.tamanhoML || 0}ml — ${state.saborNome || ''}</span>
+      <span class="resumo-valor">${fmt(valorAtual)}</span>
+    </div>`;
+
+  // Total = acumulado dos anteriores + atual
+  const totalFinal = state.totalPedidoAcumulado + valorAtual;
+
+  lista.innerHTML = htmlItens;
+  totalDisplay.textContent = fmt(totalFinal);
+
+  // Campos simples de cabeçalho (mostra info do copo atual)
+  document.getElementById('r-tamanho').textContent = state.tamanhoNome || (state.itensConfirmados.length > 0 ? 'Vários' : '—');
+  document.getElementById('r-sabor').textContent   = state.saborNome   || (state.itensConfirmados.length > 0 ? 'Vários' : '—');
+  document.getElementById('r-calda').textContent   = state.caldaNome   || '—';
+
+  // Campos de valor detalhado (do copo atual)
   const extraComps = state.complementos.filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
-  document.getElementById('r-preco-sabor').textContent = fmt(state.saborPreco);
-  document.getElementById('r-acrescimo').textContent   = fmt(state.tamanhoAcrescimo);
-  document.getElementById('r-preco-comps').textContent = fmt(extraComps);
-  document.getElementById('r-preco-calda').textContent = fmt(state.caldaPreco);
-  document.getElementById('r-total').textContent       = fmt(calcularTotal());
+  document.getElementById('r-preco-sabor').textContent  = fmt(state.saborPreco || 0);
+  document.getElementById('r-acrescimo').textContent    = fmt(state.tamanhoAcrescimo || 0);
+  document.getElementById('r-preco-comps').textContent  = fmt(extraComps);
+  document.getElementById('r-preco-calda').textContent  = fmt(state.caldaPreco || 0);
 }
 
 // ── Confirmar ────────────────────────────────────────────────
 async function confirmarPedido() {
-  const obs = document.getElementById('observacao').value.trim();
+  const obs        = document.getElementById('observacao').value.trim();
+  const totalFinal = state.totalPedidoAcumulado + calcularTotal();
   const payload = {
     tamanho_id:   state.tamanhoId,
     sabor_id:     state.saborId,
@@ -882,7 +992,7 @@ async function confirmarPedido() {
     preco_sabor:  state.saborPreco,
     acrescimo:    state.tamanhoAcrescimo,
     preco_calda:  state.caldaPreco,
-    total:        calcularTotal(),
+    total:        totalFinal,
     observacao:   obs,
   };
   try {
@@ -893,7 +1003,8 @@ async function confirmarPedido() {
     });
     const data = await res.json();
     if(data.ok) {
-      registrarVendaAdmin(data.numero, calcularTotal(), 1);
+      const qtdCopos = state.itensConfirmados.length + 1;
+      registrarVendaAdmin(data.numero, totalFinal, qtdCopos);
       gerarNota(data.numero);
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById('screen-sucesso').classList.add('active');
@@ -910,7 +1021,8 @@ async function confirmarPedido() {
 function novoPedido() {
   state = { tamanhoId:null, tamanhoNome:'', tamanhoML:0, tamanhoAcrescimo:0, gratis:0,
             saborId:null, saborNome:'', saborEmoji:'', saborPreco:0, complementos:[],
-            caldaId:null, caldaNome:'', caldaPreco:0 };
+            caldaId:null, caldaNome:'', caldaPreco:0,
+            itensConfirmados: [], totalPedidoAcumulado: 0 };
   document.querySelectorAll('.size-card,.type-card,.comp-card,.calda-card').forEach(c => c.classList.remove('selected','gratis'));
   document.getElementById('btn-next1').disabled = true;
   document.getElementById('btn-next2').disabled = true;
@@ -921,26 +1033,57 @@ function novoPedido() {
 
 // ── Impressão da notinha ─────────────────────────────────────
 function gerarNota(numero) {
-  const agora  = new Date();
-  const data   = agora.toLocaleDateString('pt-BR');
-  const hora   = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-  const obs    = document.getElementById('observacao').value.trim();
+  const agora = new Date();
+  const data  = agora.toLocaleDateString('pt-BR');
+  const hora  = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const obs   = document.getElementById('observacao').value.trim();
 
-  const extraComps = state.complementos.filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
-  const total  = calcularTotal();
+  // Junta todos os copos: os confirmados + o copo atual
+  const todosCpos = [
+    ...state.itensConfirmados,
+    {
+      tamanhoNome:  state.tamanhoNome,
+      tamanhoML:    state.tamanhoML,
+      saborNome:    state.saborNome,
+      caldaNome:    state.caldaNome,
+      caldaPreco:   state.caldaPreco,
+      complementos: state.complementos,
+      saborPreco:   state.saborPreco,
+      acrescimo:    state.tamanhoAcrescimo,
+      valor:        calcularTotal()
+    }
+  ];
 
-  // Linhas dos complementos
-  let linhasComps = '';
-  if(state.complementos.length === 0) {
-    linhasComps = '<div class="nota-linha"><span>Sem complementos</span></div>';
-  } else {
-    linhasComps = state.complementos.map(c =>
-      `<div class="nota-linha">
-        <span>${c.nome}</span>
-        <span class="${c.ehGratis ? 'nota-gratis' : ''}">${c.ehGratis ? 'GRATIS' : fmt(c.preco)}</span>
-      </div>`
-    ).join('');
-  }
+  const totalFinal = state.totalPedidoAcumulado + calcularTotal();
+
+  // Gera HTML de cada copo
+  let htmlCopos = '';
+  todosCpos.forEach((copo, idx) => {
+    const extraComps = (copo.complementos || []).filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
+
+    let linhasComps = '';
+    if (!copo.complementos || copo.complementos.length === 0) {
+      linhasComps = '<div class="nota-linha"><span>Sem complementos</span></div>';
+    } else {
+      linhasComps = copo.complementos.map(c =>
+        `<div class="nota-linha">
+          <span>${c.emoji || ''} ${c.nome}</span>
+          <span class="${c.ehGratis ? 'nota-gratis' : ''}">${c.ehGratis ? 'GRATIS' : fmt(c.preco)}</span>
+        </div>`
+      ).join('');
+    }
+
+    htmlCopos += `
+      <div class="nota-bold" style="margin-top:6px">COPO #${idx + 1}</div>
+      <div class="nota-linha"><span>Tamanho</span><span>${copo.tamanhoNome} (${copo.tamanhoML}ml)</span></div>
+      <div class="nota-linha"><span>Sabor</span><span>${copo.saborNome}</span></div>
+      <div class="nota-linha"><span>Calda</span><span>${copo.caldaNome}</span></div>
+      <div class="nota-bold" style="margin-top:4px;font-size:11px">Complementos:</div>
+      ${linhasComps}
+      <div class="nota-linha" style="font-size:11px"><span>Subtotal</span><span>${fmt(copo.valor)}</span></div>
+      ${idx < todosCpos.length - 1 ? '<hr class="nota-hr">' : ''}
+    `;
+  });
 
   document.getElementById('nota-impressao').innerHTML = `
     <div class="nota-grande">PontoAcai</div>
@@ -949,30 +1092,13 @@ function gerarNota(numero) {
 
     <div class="nota-center nota-bold">PEDIDO</div>
     <div class="nota-numero">#${String(numero).padStart(3,'0')}</div>
+    <div class="nota-center" style="font-size:11px">${todosCpos.length} copo${todosCpos.length > 1 ? 's' : ''}</div>
     <hr class="nota-hr">
 
-    <div class="nota-bold">COPO</div>
-    <div class="nota-linha"><span>Tamanho</span><span>${state.tamanhoNome} (${state.tamanhoML}ml)</span></div>
-    <div class="nota-linha"><span>Sabor</span><span>${state.saborNome}</span></div>
-    <div class="nota-linha"><span>Calda</span><span>${state.caldaNome}</span></div>
-    <hr class="nota-hr">
+    ${htmlCopos}
 
-    <div class="nota-bold">COMPLEMENTOS</div>
-    ${linhasComps}
     <hr class="nota-hr">
-
-    <div class="nota-bold">VALORES</div>
-    <div class="nota-linha"><span>Sabor</span><span>${fmt(state.saborPreco)}</span></div>
-    ${state.tamanhoAcrescimo > 0
-      ? `<div class="nota-linha"><span>Acrescimo tamanho</span><span>${fmt(state.tamanhoAcrescimo)}</span></div>`
-      : ''}
-    ${extraComps > 0
-      ? `<div class="nota-linha"><span>Complementos extras</span><span>${fmt(extraComps)}</span></div>`
-      : ''}
-    ${state.caldaPreco > 0
-      ? `<div class="nota-linha"><span>Calda extra</span><span>${fmt(state.caldaPreco)}</span></div>`
-      : ''}
-    <div class="nota-total"><span>TOTAL</span><span>${fmt(total)}</span></div>
+    <div class="nota-total"><span>TOTAL</span><span>${fmt(totalFinal)}</span></div>
 
     ${obs ? `<hr class="nota-hr"><div class="nota-bold">OBS:</div><div class="nota-obs">${obs}</div>` : ''}
 
@@ -984,50 +1110,44 @@ function gerarNota(numero) {
 
 function imprimirNota() {
   const conteudo = document.getElementById('nota-impressao').innerHTML;
-  const janela = window.open('', '_blank', 'width=400,height=700,scrollbars=yes');
+  if (!conteudo.trim()) {
+    alert('Nenhuma notinha gerada. Confirme um pedido primeiro.');
+    return;
+  }
+  const janela = window.open('', '_blank', 'width=350,height=600');
   janela.document.write(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Notinha - PontoAçaí</title>
-<style>
-    /* Estilos para a tela (opcional) */
-    body { font-family: Arial, sans-serif; }
-
-    /* Estilos EXCLUSIVOS para a impressora */
-    @media print {
-        @page {
-            size: 80mm auto; /* Força o tamanho da POS-80 */
-            margin: 0;       /* Remove margens do navegador */
-        }
-        body {
-            width: 80mm;
-            margin: 0;
-            padding: 0;
-        }
-        .ticket {
-            width: 72mm; /* Margem de segurança para não cortar texto */
-            padding: 5mm;
-            font-family: 'Courier New', Courier, monospace; /* Fonte padrão de térmica */
-            font-size: 12pt;
-            color: #000;
-        }
-        h1 { font-size: 18pt; text-align: center; margin: 0; }
-        p { margin: 5px 0; }
-        .header { text-align: center; }
+  <title>Notinha PontoAcai</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px; color: #000; background: #fff;
+      width: 80mm; padding: 5mm 4mm; line-height: 1.6;
     }
-</style>
+    .nota-center  { text-align:center; }
+    .nota-bold    { font-weight:bold; }
+    .nota-grande  { font-size:18px; font-weight:bold; text-align:center; letter-spacing:1px; }
+    .nota-numero  { font-size:30px; font-weight:bold; text-align:center; letter-spacing:3px; margin:4px 0; }
+    .nota-hr      { border:none; border-top:1px dashed #000; margin:6px 0; }
+    .nota-linha   { display:flex; justify-content:space-between; }
+    .nota-gratis  { font-style:italic; }
+    .nota-total   { display:flex; justify-content:space-between; font-size:15px; font-weight:bold; border-top:2px solid #000; padding-top:4px; margin-top:4px; }
+    .nota-obs     { font-style:italic; font-size:11px; }
+    .nota-rodape  { text-align:center; font-size:11px; margin-top:8px; }
+    @page { size:80mm auto; margin:0; }
+  </style>
 </head>
-<body>
-  ${conteudo}
-  <script>
-    window.onload = function() {
+<body>${conteudo}<script>
+  window.onload = function() {
+    setTimeout(function() {
       window.print();
       window.onafterprint = function() { window.close(); };
-    };
-  <\/script>
-</body>
-</html>`);
+    }, 300);
+  };
+<\/script></body></html>`);
   janela.document.close();
 }
 
