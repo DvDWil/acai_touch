@@ -525,7 +525,7 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
   <!-- HEADER -->
   <div class="header">
     <div class="logo">
-      <span class="logo-emoji">🫐</span>Ponto<span>Açaí</span>
+      <span class="logo-emoji"></span>Ponto<span>Açaí</span>
     </div>
     <div class="step-indicator">
       <div class="step-dot active" id="dot1"></div>
@@ -1067,14 +1067,14 @@ function gerarNota(numero) {
     } else {
       linhasComps = copo.complementos.map(c =>
         `<div class="nota-linha">
-          <span>${c.emoji || ''} ${c.nome}</span>
+          <span>${c.nome}</span>
           <span class="${c.ehGratis ? 'nota-gratis' : ''}">${c.ehGratis ? 'GRATIS' : fmt(c.preco)}</span>
         </div>`
       ).join('');
     }
 
     htmlCopos += `
-      <div class="nota-bold" style="margin-top:6px">COPO #${idx + 1}</div>
+      <div class="nota-bold"  style="margin-top:6px">COPO #${idx + 1}</div>
       <div class="nota-linha"><span>Tamanho</span><span>${copo.tamanhoNome} (${copo.tamanhoML}ml)</span></div>
       <div class="nota-linha"><span>Sabor</span><span>${copo.saborNome}</span></div>
       <div class="nota-linha"><span>Calda</span><span>${copo.caldaNome}</span></div>
@@ -1124,19 +1124,19 @@ function imprimirNota() {
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 13px; color: #000; background: #fff;
+      font-size: 20px; color: #000; background: #fff;
       width: 80mm; padding: 5mm 4mm; line-height: 1.6;
     }
     .nota-center  { text-align:center; }
     .nota-bold    { font-weight:bold; }
-    .nota-grande  { font-size:18px; font-weight:bold; text-align:center; letter-spacing:1px; }
+    .nota-grande  { font-size:23px; font-weight:bold; text-align:center; letter-spacing:1px; }
     .nota-numero  { font-size:30px; font-weight:bold; text-align:center; letter-spacing:3px; margin:4px 0; }
     .nota-hr      { border:none; border-top:1px dashed #000; margin:6px 0; }
     .nota-linha   { display:flex; justify-content:space-between; }
     .nota-gratis  { font-style:italic; }
     .nota-total   { display:flex; justify-content:space-between; font-size:15px; font-weight:bold; border-top:2px solid #000; padding-top:4px; margin-top:4px; }
-    .nota-obs     { font-style:italic; font-size:11px; }
-    .nota-rodape  { text-align:center; font-size:11px; margin-top:8px; }
+    .nota-obs     { font-style:italic; font-size:20px; }
+    .nota-rodape  { text-align:center; font-size:20px; margin-top:8px; }
     @page { size:80mm auto; margin:0; }
   </style>
 </head>
