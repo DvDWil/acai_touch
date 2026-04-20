@@ -525,7 +525,7 @@ $caldasDB     = $pdo->query("SELECT * FROM caldas     WHERE ativo = 1 ORDER BY p
   <!-- HEADER -->
   <div class="header">
     <div class="logo">
-      <span class="logo-emoji"></span>Ponto<span>Açaí</span>
+  <img src="/acai_touch/assets/images/logo.png" alt="PontoAçaí" style="height: 69px;">
     </div>
     <div class="step-indicator">
       <div class="step-dot active" id="dot1"></div>
