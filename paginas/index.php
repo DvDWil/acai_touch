@@ -387,10 +387,27 @@ $bebidasDB    = $pdo->query("SELECT * FROM bebidas    WHERE ativo = 1 ORDER BY p
   <div class="screen" id="screen-sabor">
     <div class="progress-bar"><div class="progress-fill" style="width:28%"></div></div>
     <div class="screen-title">🍓 Qual o seu açaí?</div>
-    <p class="screen-sub">Preço base · acréscimo do tamanho será somado</p>
+    <p class="screen-sub" id="sabor-sub">Escolha um sabor</p>
+
+    <!-- Toggle Casadinho -->
+    <div style="width:100%;max-width:800px;margin-bottom:16px;display:flex;justify-content:center;">
+      <button id="btn-casadinho-toggle" onclick="toggleCasadinho()"
+        style="background:rgba(255,255,255,0.07);border:2px solid rgba(155,89,208,0.4);color:rgba(255,255,255,0.75);
+               font-family:'Nunito',sans-serif;font-size:0.95rem;font-weight:800;padding:10px 24px;
+               border-radius:50px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+        🍫 Quero Casadinho (misturar 2 sabores)
+      </button>
+    </div>
+
+    <!-- Banner de instrução do Casadinho -->
+    <div id="casadinho-banner" style="display:none;width:100%;max-width:800px;
+         background:rgba(107,47,160,0.18);border:1px solid rgba(155,89,208,0.5);
+         border-radius:14px;padding:12px 20px;margin-bottom:16px;text-align:center;font-size:0.95rem;">
+    </div>
+
     <div class="type-grid">
       <?php
-        $classesSabor = ['morango'=>'morango','casadinho'=>'casadinho','açúcar'=>'semacucar','acucar'=>'semacucar','tradicional'=>'tradicional'];
+        $classesSabor = ['morango'=>'morango','açúcar'=>'semacucar','acucar'=>'semacucar','tradicional'=>'tradicional','cupuacu'=>'default','cupuaçu'=>'default','maracuja'=>'default','maracujá'=>'default'];
         foreach($saboresDB as $s):
           $nomeLower = mb_strtolower($s['nome']);
           $classe = 'default';
@@ -398,7 +415,7 @@ $bebidasDB    = $pdo->query("SELECT * FROM bebidas    WHERE ativo = 1 ORDER BY p
             if(str_contains($nomeLower, $k)) { $classe = $v; break; }
           }
       ?>
-      <div class="type-card <?= $classe ?>" onclick="selectSabor(this, <?= $s['id'] ?>, <?= $s['preco'] ?>)">
+      <div class="type-card <?= $classe ?>" data-sabor-id="<?= $s['id'] ?>" onclick="selectSabor(this, <?= $s['id'] ?>)">
         <div class="type-emoji"><?= $s['emoji'] ?></div>
         <div class="type-info">
           <div class="type-name"><?= htmlspecialchars($s['nome']) ?></div>
@@ -423,7 +440,7 @@ $bebidasDB    = $pdo->query("SELECT * FROM bebidas    WHERE ativo = 1 ORDER BY p
     <div class="comp-banner" id="comp-banner">
       <div>Escolha à vontade · os primeiros são <strong>grátis</strong>!</div>
       <div class="comp-counter-txt" id="comp-counter">—</div>
-      <div class="comp-extra-info">Acompanhamento extra: R$ 1,90 cada</div>
+      <div class="comp-extra-info">Acompanhamento extra: preço individual de cada item</div>
     </div>
     <div class="comp-grid">
       <?php foreach($adicionaisDB as $a):
@@ -464,12 +481,11 @@ $bebidasDB    = $pdo->query("SELECT * FROM bebidas    WHERE ativo = 1 ORDER BY p
           foreach($classesCalda as $k => $v) {
             if(str_contains($nomeLower, $k)) { $classe = $v; break; }
           }
-          // Preço da Nutella é dinâmico (por tamanho), renderizamos via JS
           $isNutella = str_contains($nomeLower, 'nutella');
       ?>
       <div class="calda-card <?= $classe ?>"
            id="calda-card-<?= $c['id'] ?>"
-           onclick="selectCalda(this, <?= $c['id'] ?>, <?= $isNutella ? "'nutella'" : $c['preco'] ?>, <?= $isNutella ? 'true' : 'false' ?>)">
+           onclick="selectCalda(this, <?= $c['id'] ?>, <?= $isNutella ? "'nutella'" : $c['preco'] ?>, <?= $isNutella ? 'true' : 'false' ?>, 1)">
         <div class="calda-emoji"><?= $c['emoji'] ?></div>
         <div class="calda-nome"><?= htmlspecialchars($c['nome']) ?></div>
         <div class="calda-price-badge gratis" id="calda-badge-<?= $c['id'] ?>">
@@ -485,6 +501,39 @@ $bebidasDB    = $pdo->query("SELECT * FROM bebidas    WHERE ativo = 1 ORDER BY p
       </div>
       <?php endforeach; ?>
     </div>
+
+    <!-- Segunda calda (aparece apenas no 500ml) -->
+    <div id="calda2-section" style="display:none; width:100%; max-width:900px; margin-top:24px;">
+      <div style="text-align:center; margin-bottom:12px; font-family:'Baloo 2',cursive; font-size:1.1rem; font-weight:800; color:var(--amarelo);">🍯 2ª Calda (inclusa no 500ml!)</div>
+      <div class="calda-grid" id="calda2-grid">
+        <?php foreach($caldasDB as $c):
+          $nomeLower = mb_strtolower($c['nome']);
+          $classe = 'default-calda';
+          foreach($classesCalda as $k => $v) {
+            if(str_contains($nomeLower, $k)) { $classe = $v; break; }
+          }
+          $isNutella = str_contains($nomeLower, 'nutella');
+        ?>
+        <div class="calda-card <?= $classe ?>"
+             id="calda2-card-<?= $c['id'] ?>"
+             onclick="selectCalda(this, <?= $c['id'] ?>, <?= $isNutella ? "'nutella'" : $c['preco'] ?>, <?= $isNutella ? 'true' : 'false' ?>, 2)">
+          <div class="calda-emoji"><?= $c['emoji'] ?></div>
+          <div class="calda-nome"><?= htmlspecialchars($c['nome']) ?></div>
+          <div class="calda-price-badge gratis" id="calda2-badge-<?= $c['id'] ?>">
+            <?php if($isNutella): ?>
+              <span id="calda2-nutella-price">+ R$ ?</span>
+            <?php else: ?>
+              <?= $c['preco'] > 0 ? '+ R$ '.number_format($c['preco'],2,',','.') : 'Incluído ✅' ?>
+            <?php endif; ?>
+          </div>
+          <?php if($isNutella): ?>
+            <div class="calda-aviso-gratis">Adicional conforme tamanho</div>
+          <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
     <div class="btn-group">
       <button class="btn btn-secondary" onclick="goTo('complementos')">← Voltar</button>
       <button class="btn btn-primary" id="btn-next4" onclick="goTo('bebida')" disabled>Próximo →</button>
@@ -645,8 +694,13 @@ const CFG_BEBIDAS    = <?= json_encode($bebidasDB,    JSON_UNESCAPED_UNICODE) ?>
 let state = {
   tamanhoId: null, tamanhoNome: '', tamanhoML: 0, tamanhoAcrescimo: 0, gratis: 0, caldasGratis: 1,
   saborId: null, saborNome: '', saborEmoji: '', saborPreco: 0,
+  // Casadinho: segundo sabor
+  sabor2Id: null, sabor2Nome: '', sabor2Emoji: '',
+  isCasadinho: false,
   complementos: [],
   caldaId: null, caldaNome: '', caldaPreco: 0,
+  // Segunda calda (disponível no 500ml)
+  calda2Id: null, calda2Nome: '', calda2Preco: 0,
   bebidaId: null, bebidaNome: '', bebidaPreco: 0,
   itensConfirmados: [],
   totalPedidoAcumulado: 0
@@ -699,15 +753,112 @@ function atualizarPrecosSabores() {
   });
 }
 // ── SABOR ────────────────────────────────────────────────────
-function selectSabor(el, id, preco) {
+function toggleCasadinho() {
+  state.isCasadinho = !state.isCasadinho;
+  // Limpa seleção ao trocar de modo
+  state.saborId = null; state.saborNome = ''; state.saborEmoji = ''; state.saborPreco = 0;
+  state.sabor2Id = null; state.sabor2Nome = ''; state.sabor2Emoji = '';
   document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
+  document.getElementById('btn-next2').disabled = true;
+
+  const btn = document.getElementById('btn-casadinho-toggle');
+  if(state.isCasadinho) {
+    btn.style.background = 'rgba(233,30,140,0.25)';
+    btn.style.borderColor = 'var(--rosa)';
+    btn.style.color = '#fff';
+    btn.textContent = '✕ Cancelar Casadinho';
+  } else {
+    btn.style.background = 'rgba(255,255,255,0.07)';
+    btn.style.borderColor = 'rgba(155,89,208,0.4)';
+    btn.style.color = 'rgba(255,255,255,0.75)';
+    btn.textContent = '🍫 Quero Casadinho (misturar 2 sabores)';
+    document.getElementById('casadinho-banner').style.display = 'none';
+    document.getElementById('sabor-sub').textContent = 'Escolha um sabor';
+  }
+  atualizarBannerCasadinho();
+}
+
+function selectSabor(el, id) {
   const s = CFG_SABORES.find(x => x.id == id);
-  state.saborId    = id;
-  state.saborNome  = s.nome;
-  state.saborEmoji = s.emoji;
-  state.saborPreco = precoSabor(s);
-  document.getElementById('btn-next2').disabled = false;
+
+  if(state.isCasadinho) {
+    if(state.saborId === null) {
+      // Primeiro sabor do mix
+      document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      state.saborId    = id;
+      state.saborNome  = s.nome;
+      state.saborEmoji = s.emoji;
+      state.sabor2Id   = null; state.sabor2Nome = ''; state.sabor2Emoji = '';
+      state.saborPreco = precoSabor(s);
+      document.getElementById('btn-next2').disabled = true; // ainda precisa do 2º
+    } else if(state.saborId == id) {
+      // Clicou no mesmo — deseleciona
+      el.classList.remove('selected');
+      state.saborId = null; state.saborNome = ''; state.saborEmoji = ''; state.saborPreco = 0;
+      document.getElementById('btn-next2').disabled = true;
+    } else if(state.sabor2Id === null) {
+      // Segundo sabor — mantém o primeiro selecionado também
+      el.classList.add('selected');
+      state.sabor2Id    = id;
+      state.sabor2Nome  = s.nome;
+      state.sabor2Emoji = s.emoji;
+      // Preço = o mais caro dos dois
+      const s1 = CFG_SABORES.find(x => x.id == state.saborId);
+      state.saborPreco = Math.max(precoSabor(s1), precoSabor(s));
+      document.getElementById('btn-next2').disabled = false;
+    } else if(state.sabor2Id == id) {
+      // Deseleciona o segundo
+      el.classList.remove('selected');
+      state.sabor2Id = null; state.sabor2Nome = ''; state.sabor2Emoji = '';
+      const s1 = CFG_SABORES.find(x => x.id == state.saborId);
+      state.saborPreco = precoSabor(s1);
+      document.getElementById('btn-next2').disabled = true;
+    } else {
+      // Já tem 2 selecionados — troca o segundo
+      document.querySelectorAll('.type-card').forEach(c => {
+        if(c.dataset.saborId == state.saborId) c.classList.add('selected');
+        else c.classList.remove('selected');
+      });
+      el.classList.add('selected');
+      state.sabor2Id    = id;
+      state.sabor2Nome  = s.nome;
+      state.sabor2Emoji = s.emoji;
+      const s1 = CFG_SABORES.find(x => x.id == state.saborId);
+      state.saborPreco = Math.max(precoSabor(s1), precoSabor(s));
+      document.getElementById('btn-next2').disabled = false;
+    }
+    atualizarBannerCasadinho();
+  } else {
+    // Modo normal — 1 sabor
+    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    state.saborId    = id;
+    state.saborNome  = s.nome;
+    state.saborEmoji = s.emoji;
+    state.saborPreco = precoSabor(s);
+    state.sabor2Id   = null; state.sabor2Nome = ''; state.sabor2Emoji = '';
+    document.getElementById('btn-next2').disabled = false;
+  }
+}
+
+function atualizarBannerCasadinho() {
+  const banner = document.getElementById('casadinho-banner');
+  const sub    = document.getElementById('sabor-sub');
+  if(!state.isCasadinho) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  if(state.saborId === null) {
+    banner.innerHTML = `<strong style="color:var(--rosa)">🍫 Modo Casadinho</strong><br><span style="color:rgba(255,255,255,0.7)">Escolha o <strong>1º sabor</strong> da mistura</span>`;
+    if(sub) sub.textContent = 'Casadinho: escolha o 1º sabor';
+  } else if(!state.sabor2Id) {
+    const s1 = CFG_SABORES.find(x => x.id == state.saborId);
+    banner.innerHTML = `<strong style="color:var(--amarelo)">✅ 1º: ${s1.emoji} ${s1.nome}</strong><br><span style="color:rgba(255,255,255,0.7)">Agora escolha o <strong>2º sabor</strong> da mistura</span>`;
+    if(sub) sub.textContent = 'Casadinho: escolha o 2º sabor';
+  } else {
+    const s1 = CFG_SABORES.find(x => x.id == state.saborId);
+    banner.innerHTML = `<strong style="color:var(--verde)">✅ Mix pronto: ${s1.emoji} ${s1.nome} + ${state.sabor2Emoji} ${state.sabor2Nome}</strong><br><span style="color:rgba(255,255,255,0.55);font-size:0.85rem">Preço: R$ ${state.saborPreco.toFixed(2).replace('.',',')} · Toque em um sabor para trocar o 2º</span>`;
+    if(sub) sub.textContent = 'Casadinho confirmado!';
+  }
 }
 
 // ── COMPLEMENTOS ─────────────────────────────────────────────
@@ -733,15 +884,16 @@ function recalcularGratis() {
     if(el) { el.classList.toggle('gratis', c.ehGratis); }
     if(priceEl) {
       priceEl.className = 'comp-price' + (c.ehGratis ? ' gratis-label' : '');
-      priceEl.textContent = c.ehGratis ? '🎁 Grátis' : '+ R$ 1,90';
+      priceEl.textContent = c.ehGratis ? '🎁 Grátis' : ('+ R$ ' + c.preco.toFixed(2).replace('.',','));
     }
   });
   document.querySelectorAll('.comp-card:not(.selected)').forEach(el => {
     const id = el.id.replace('comp-','');
     const priceEl = document.getElementById('comp-price-'+id);
-    if(priceEl && !el.classList.contains('sem-estoque')) {
+    const a = CFG_ADICIONAIS.find(x => x.id == id);
+    if(priceEl && !el.classList.contains('sem-estoque') && a) {
       priceEl.className = 'comp-price';
-      priceEl.textContent = '+ R$ 1,90';
+      priceEl.textContent = '+ R$ ' + parseFloat(a.preco).toFixed(2).replace('.',',');
     }
   });
 }
@@ -751,11 +903,12 @@ function atualizarBannerComps() {
   const gratis= Math.min(sel, state.gratis);
   const pagos = Math.max(0, sel - state.gratis);
   const restam= Math.max(0, state.gratis - sel);
+  const totalExtras = state.complementos.filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
   let txt = '';
   if(sel === 0)    txt = `🎁 Você tem ${state.gratis} acomp. grátis disponíve${state.gratis > 1 ? 'is' : 'l'}`;
   else if(restam > 0) txt = `🎁 Ainda tem ${restam} grátis`;
-  else if(pagos > 0)  txt = `💰 ${gratis} grátis + ${pagos} extra${pagos > 1 ? 's' : ''} (R$ ${(pagos*1.9).toFixed(2).replace('.',',')} )`;
-  else                txt = `✅ Grátis esgotados — próximos: R$ 1,90 cada`;
+  else if(pagos > 0)  txt = `💰 ${gratis} grátis + ${pagos} extra${pagos > 1 ? 's' : ''} (R$ ${totalExtras.toFixed(2).replace('.',',')} )`;
+  else                txt = `✅ Grátis esgotados — próximos serão cobrados`;
   document.getElementById('comp-counter').textContent = txt;
 }
 
@@ -768,24 +921,48 @@ function precoNutella() {
 }
 
 function atualizarCaldas() {
-  // Atualiza o badge da Nutella conforme tamanho selecionado
   const nutella = CFG_CALDAS.find(c => c.nome.toLowerCase().includes('nutella'));
-  if(!nutella) return;
-  const priceEl = document.getElementById('calda-nutella-price');
-  if(priceEl) priceEl.textContent = '+ R$ ' + precoNutella().toFixed(2).replace('.',',');
-  // Atualiza subtítulo
+  if(nutella) {
+    const priceEl = document.getElementById('calda-nutella-price');
+    if(priceEl) priceEl.textContent = '+ R$ ' + precoNutella().toFixed(2).replace('.',',');
+    const priceEl2 = document.getElementById('calda2-nutella-price');
+    if(priceEl2) priceEl2.textContent = '+ R$ ' + precoNutella().toFixed(2).replace('.',',');
+  }
   const sub = document.getElementById('calda-sub');
   if(sub) sub.textContent = `${state.caldasGratis} calda${state.caldasGratis > 1 ? 's' : ''} incluída${state.caldasGratis > 1 ? 's' : ''} grátis no ${state.tamanhoML}ml`;
+  // Mostra/esconde seção da 2ª calda
+  const sec2 = document.getElementById('calda2-section');
+  if(sec2) sec2.style.display = state.caldasGratis >= 2 ? 'block' : 'none';
+  // Reseta 2ª calda se tamanho não suporta
+  if(state.caldasGratis < 2) {
+    state.calda2Id = null; state.calda2Nome = ''; state.calda2Preco = 0;
+    document.querySelectorAll('[id^="calda2-card-"]').forEach(c => c.classList.remove('selected'));
+  }
+  // Reavalia botão (calda1 pode já estar selecionada ao voltar)
+  const calda1Ok = state.caldaId !== null;
+  const calda2Ok = state.caldasGratis < 2 || state.calda2Id !== null;
+  document.getElementById('btn-next4').disabled = !(calda1Ok && calda2Ok);
 }
 
-function selectCalda(el, id, precoOuNutella, isNutella) {
-  document.querySelectorAll('.calda-card').forEach(c => c.classList.remove('selected'));
+function selectCalda(el, id, precoOuNutella, isNutella, slot) {
+  slot = slot || 1;
+  const prefix = slot === 2 ? 'calda2-card-' : 'calda-card-';
+  document.querySelectorAll('[id^="'+prefix+'"]').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   const c = CFG_CALDAS.find(x => x.id == id);
-  state.caldaId   = id;
-  state.caldaNome = c.nome;
-  state.caldaPreco = isNutella ? precoNutella() : parseFloat(precoOuNutella);
-  document.getElementById('btn-next4').disabled = false;
+  const preco = isNutella ? precoNutella() : parseFloat(precoOuNutella);
+  if(slot === 2) {
+    state.calda2Id   = id;
+    state.calda2Nome = c.nome;
+    state.calda2Preco = preco;
+  } else {
+    state.caldaId    = id;
+    state.caldaNome  = c.nome;
+    state.caldaPreco = preco;
+  }
+  const calda1Ok = state.caldaId !== null;
+  const calda2Ok = state.caldasGratis < 2 || state.calda2Id !== null;
+  document.getElementById('btn-next4').disabled = !(calda1Ok && calda2Ok);
 }
 
 // ── BEBIDA ───────────────────────────────────────────────────
@@ -817,11 +994,15 @@ function maisUm(querMais) {
   if(querMais) {
     const valorCopoAtual = calcularTotal();
     state.itensConfirmados.push({
-      tamanhoNome: state.tamanhoNome,
-      tamanhoML:   state.tamanhoML,
-      saborNome:   state.saborNome,
-      caldaNome:   state.caldaNome,
-      caldaPreco:  state.caldaPreco,
+      tamanhoNome:  state.tamanhoNome,
+      tamanhoML:    state.tamanhoML,
+      saborNome:    state.saborNome,
+      isCasadinho:  state.isCasadinho,
+      sabor2Nome:   state.sabor2Nome,
+      caldaNome:    state.caldaNome,
+      calda2Nome:   state.calda2Nome,
+      caldaPreco:   state.caldaPreco,
+      calda2Preco:  state.calda2Preco,
       complementos: state.complementos.slice(),
       saborPreco:   state.saborPreco,
       acrescimo:    state.tamanhoAcrescimo,
@@ -830,23 +1011,42 @@ function maisUm(querMais) {
       valor:        valorCopoAtual
     });
     state.totalPedidoAcumulado += valorCopoAtual;
-    // Reset copo atual
-    state.tamanhoId = null; state.tamanhoNome = ''; state.tamanhoML = 0;
-    state.tamanhoAcrescimo = 0; state.gratis = 0; state.caldasGratis = 1;
-    state.saborId = null; state.saborNome = ''; state.saborEmoji = ''; state.saborPreco = 0;
-    state.caldaId = null; state.caldaNome = ''; state.caldaPreco = 0;
-    state.bebidaId = null; state.bebidaNome = ''; state.bebidaPreco = 0;
-    state.complementos = [];
-    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected','gratis'));
-    document.getElementById('btn-next1').disabled = true;
-    document.getElementById('btn-next2').disabled = true;
-    document.getElementById('btn-next4').disabled = true;
-    document.getElementById('btn-next5').disabled = true;
+    resetCopoAtual();
     goTo('tamanho');
   } else {
     montarResumo();
     goTo('resumo');
   }
+}
+
+function resetCopoAtual() {
+  state.tamanhoId = null; state.tamanhoNome = ''; state.tamanhoML = 0;
+  state.tamanhoAcrescimo = 0; state.gratis = 0; state.caldasGratis = 1;
+  state.saborId = null; state.saborNome = ''; state.saborEmoji = ''; state.saborPreco = 0;
+  state.sabor2Id = null; state.sabor2Nome = ''; state.sabor2Emoji = ''; state.isCasadinho = false;
+  state.caldaId = null; state.caldaNome = ''; state.caldaPreco = 0;
+  state.calda2Id = null; state.calda2Nome = ''; state.calda2Preco = 0;
+  state.bebidaId = null; state.bebidaNome = ''; state.bebidaPreco = 0;
+  state.complementos = [];
+  // Limpa visual de seleção em todos os cards
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected','gratis'));
+  // Reseta botão e banner do Casadinho
+  const banner = document.getElementById('casadinho-banner');
+  if(banner) banner.style.display = 'none';
+  const btnCas = document.getElementById('btn-casadinho-toggle');
+  if(btnCas) {
+    btnCas.style.background   = 'rgba(255,255,255,0.07)';
+    btnCas.style.borderColor  = 'rgba(155,89,208,0.4)';
+    btnCas.style.color        = 'rgba(255,255,255,0.75)';
+    btnCas.textContent        = '🍫 Quero Casadinho (misturar 2 sabores)';
+  }
+  const sub = document.getElementById('sabor-sub');
+  if(sub) sub.textContent = 'Escolha um sabor';
+  // Desabilita botões de próximo
+  document.getElementById('btn-next1').disabled = true;
+  document.getElementById('btn-next2').disabled = true;
+  document.getElementById('btn-next4').disabled = true;
+  document.getElementById('btn-next5').disabled = true;
 }
 
 // ── CÁLCULOS ─────────────────────────────────────────────────
@@ -863,9 +1063,12 @@ function montarResumo() {
   let htmlItens      = '';
 
   state.itensConfirmados.forEach((item, index) => {
+    const nomeSaborItem = (item.isCasadinho && item.sabor2Nome)
+      ? `${item.saborNome} + ${item.sabor2Nome}`
+      : item.saborNome;
     htmlItens += `
       <div class="resumo-linha" style="border-left:3px solid var(--rosa);margin-bottom:4px">
-        <span class="resumo-label">Copo #${index+1}: ${item.tamanhoNome} ${item.tamanhoML}ml — ${item.saborNome}</span>
+        <span class="resumo-label">Copo #${index+1}: ${item.tamanhoNome} ${item.tamanhoML}ml — ${nomeSaborItem}</span>
         <span class="resumo-valor">${fmt(item.valor)}</span>
       </div>`;
   });
@@ -883,8 +1086,10 @@ function montarResumo() {
   totalDisplay.textContent = fmt(totalFinal);
 
   document.getElementById('r-tamanho').textContent = state.tamanhoNome || '—';
-  document.getElementById('r-sabor').textContent   = state.saborNome   || '—';
-  document.getElementById('r-calda').textContent   = state.caldaNome   || '—';
+  document.getElementById('r-sabor').textContent   = state.isCasadinho && state.sabor2Nome
+    ? `${state.saborNome} + ${state.sabor2Nome}` : (state.saborNome || '—');
+  document.getElementById('r-calda').textContent   = state.calda2Nome
+    ? `${state.caldaNome} + ${state.calda2Nome}` : (state.caldaNome || '—');
 
   const extraComps = state.complementos.filter(c => !c.ehGratis).reduce((s,c) => s+c.preco, 0);
   document.getElementById('r-preco-sabor').textContent = fmt(state.saborPreco||0);
@@ -914,11 +1119,14 @@ async function confirmarPedido() {
   const payload = {
     tamanho_id:   state.tamanhoId,
     sabor_id:     state.saborId,
+    sabor_id2:    state.sabor2Id || null,
     calda_id:     state.caldaId,
+    calda_id2:    state.calda2Id || null,
     complementos: state.complementos.map(c => ({ id: c.id, foi_gratis: c.ehGratis ? 1 : 0, preco: c.preco })),
     preco_sabor:  state.saborPreco,
     acrescimo:    state.tamanhoAcrescimo,
     preco_calda:  state.caldaPreco,
+    preco_calda2: state.calda2Preco || 0,
     bebida_id:    state.bebidaId,
     preco_bebida: state.bebidaPreco,
     total:        totalFinal,
@@ -950,14 +1158,29 @@ async function confirmarPedido() {
 function novoPedido() {
   state = {
     tamanhoId:null, tamanhoNome:'', tamanhoML:0, tamanhoAcrescimo:0, gratis:0, caldasGratis:1,
-    saborId:null, saborNome:'', saborEmoji:'', saborPreco:0, complementos:[],
+    saborId:null, saborNome:'', saborEmoji:'', saborPreco:0,
+    sabor2Id:null, sabor2Nome:'', sabor2Emoji:'', isCasadinho:false,
+    complementos:[],
     caldaId:null, caldaNome:'', caldaPreco:0,
+    calda2Id:null, calda2Nome:'', calda2Preco:0,
     bebidaId:null, bebidaNome:'', bebidaPreco:0,
     itensConfirmados:[], totalPedidoAcumulado:0
   };
   document.querySelectorAll('.size-card,.type-card,.comp-card,.calda-card,.beb-card').forEach(c => c.classList.remove('selected','gratis'));
   ['btn-next1','btn-next2','btn-next4','btn-next5'].forEach(id => document.getElementById(id).disabled = true);
   document.getElementById('observacao').value = '';
+  // Reseta UI do Casadinho
+  const banner = document.getElementById('casadinho-banner');
+  if(banner) banner.style.display = 'none';
+  const btnCas = document.getElementById('btn-casadinho-toggle');
+  if(btnCas) {
+    btnCas.style.background  = 'rgba(255,255,255,0.07)';
+    btnCas.style.borderColor = 'rgba(155,89,208,0.4)';
+    btnCas.style.color       = 'rgba(255,255,255,0.75)';
+    btnCas.textContent       = '🍫 Quero Casadinho (misturar 2 sabores)';
+  }
+  const sub = document.getElementById('sabor-sub');
+  if(sub) sub.textContent = 'Escolha um sabor';
   goTo('tamanho');
 }
 
@@ -971,17 +1194,36 @@ function gerarNota(numero) {
   const todosCpos = [
     ...state.itensConfirmados,
     {
-      tamanhoNome: state.tamanhoNome, tamanhoML: state.tamanhoML,
-      saborNome: state.saborNome, caldaNome: state.caldaNome, caldaPreco: state.caldaPreco,
-      complementos: state.complementos, saborPreco: state.saborPreco,
-      acrescimo: state.tamanhoAcrescimo, bebidaNome: state.bebidaNome, bebidaPreco: state.bebidaPreco,
-      valor: calcularTotal()
+      tamanhoNome:  state.tamanhoNome,
+      tamanhoML:    state.tamanhoML,
+      saborNome:    state.saborNome,
+      isCasadinho:  state.isCasadinho,
+      sabor2Nome:   state.sabor2Nome,
+      caldaNome:    state.caldaNome,
+      calda2Nome:   state.calda2Nome,
+      caldaPreco:   state.caldaPreco,
+      calda2Preco:  state.calda2Preco,
+      complementos: state.complementos,
+      saborPreco:   state.saborPreco,
+      acrescimo:    state.tamanhoAcrescimo,
+      bebidaNome:   state.bebidaNome,
+      bebidaPreco:  state.bebidaPreco,
+      valor:        calcularTotal()
     }
   ];
   const totalFinal = state.totalPedidoAcumulado + calcularTotal();
 
   let htmlCopos = '';
   todosCpos.forEach((copo, idx) => {
+    const nomesSabor = (copo.isCasadinho && copo.sabor2Nome)
+      ? `${copo.saborNome} + ${copo.sabor2Nome} (Casadinho)`
+      : copo.saborNome;
+
+    const nomeCalda = copo.calda2Nome
+      ? `${copo.caldaNome} + ${copo.calda2Nome}`
+      : copo.caldaNome;
+    const precoCalda = (copo.caldaPreco||0) + (copo.calda2Preco||0);
+
     let linhasComps = '';
     if(!copo.complementos || copo.complementos.length === 0) {
       linhasComps = '<div class="nota-linha"><span>Sem acompanhamentos</span></div>';
@@ -994,8 +1236,8 @@ function gerarNota(numero) {
     htmlCopos += `
       <div class="nota-bold" style="margin-top:6px">COPO #${idx+1}</div>
       <div class="nota-linha"><span>Tamanho</span><span>${copo.tamanhoNome} (${copo.tamanhoML}ml)</span></div>
-      <div class="nota-linha"><span>Sabor</span><span>${copo.saborNome}</span></div>
-      <div class="nota-linha"><span>Calda</span><span>${copo.caldaNome}${copo.caldaPreco > 0 ? ' — ' + fmt(copo.caldaPreco) : ' — Incluída'}</span></div>
+      <div class="nota-linha"><span>Sabor</span><span>${nomesSabor}</span></div>
+      <div class="nota-linha"><span>Calda</span><span>${nomeCalda}${precoCalda > 0 ? ' — ' + fmt(precoCalda) : ' — Incluída'}</span></div>
       <div class="nota-bold" style="margin-top:4px;font-size:11px">Acompanhamentos:</div>
       ${linhasComps}
       ${bebLinha}

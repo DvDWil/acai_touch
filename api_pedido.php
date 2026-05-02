@@ -29,19 +29,24 @@ try {
         ->execute([$numero, $body['total'], $body['observacao'] ?? '']);
     $pedidoId = $pdo->lastInsertId();
 
-    // 3. Inserir item do pedido (com bebida)
+    // 3. Inserir item do pedido (com bebida e suporte a 2 sabores / 2 caldas)
     $pdo->prepare("
         INSERT INTO itens_pedido
-            (pedido_id, sabor_id, tamanho_id, preco_sabor, acrescimo, calda_id, preco_calda, bebida_id, preco_bebida, subtotal)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (pedido_id, sabor_id, sabor_id2, tamanho_id, preco_sabor, acrescimo,
+             calda_id, preco_calda, calda_id2, preco_calda2,
+             bebida_id, preco_bebida, subtotal)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ")->execute([
         $pedidoId,
         $body['sabor_id'],
+        $body['sabor_id2'] ?: null,
         $body['tamanho_id'],
         $body['preco_sabor'],
         $body['acrescimo'],
         $body['calda_id'] ?: null,
         $body['preco_calda'],
+        $body['calda_id2'] ?: null,
+        $body['preco_calda2'] ?? 0,
         $body['bebida_id'] ?: null,
         $body['preco_bebida'] ?? 0,
         $body['total'],
